@@ -298,6 +298,38 @@ After the expansion, the catalog has one hip hop song, and the same profile retu
 
 Adding a single song in the user's genre immediately put it in first place, even though its mood (`confident`) does not match. This shows how much the results depend on what is in the catalog.
 
+### Experiment 6: Adversarial profile (folk, sad, energy 0.9)
+
+Sad folk music is usually quiet, and the catalog's only folk song, which is also its only sad song, has energy 0.30. Asking for sad folk at energy 0.9 is a contradiction that no song can satisfy. Actual output:
+
+```text
+1. Harbor Lullaby (folk, sad, 0.30) - Score: 0.820
+   Because: genre matches your favorite (folk); mood matches your favorite (sad); energy 0.30 is 40% similar to your target 0.90
+2. Storm Runner (rock, intense, 0.91) - Score: 0.297
+   Because: genre is rock, not folk; mood is intense, not sad; energy 0.91 is 99% similar to your target 0.90
+3. Gym Hero (pop, intense, 0.93) - Score: 0.291
+   Because: genre is pop, not folk; mood is intense, not sad; energy 0.93 is 97% similar to your target 0.90
+4. Pulse Horizon (edm, energetic, 0.95) - Score: 0.285
+   Because: genre is edm, not folk; mood is energetic, not sad; energy 0.95 is 95% similar to your target 0.90
+5. Iron Tempest (metal, angry, 0.97) - Score: 0.279
+   Because: genre is metal, not folk; mood is angry, not sad; energy 0.97 is 93% similar to your target 0.90
+```
+
+The two label matches give the quiet ballad a high-looking 0.820 even though its energy is far from the target. The rest of the list is sorted by energy alone, and four of those five songs also appear in the rock listener's top 5. The system never tells the user that their preferences conflict.
+
+### Experiment 7: Halving genre, doubling energy (normalized)
+
+I reran the four Phase 4 profiles with genre 0.20, mood 0.30, energy 0.60, normalized to **0.182 / 0.273 / 0.545** because the raw values add up to 1.10. The experiment ran in a temporary script, and `src/recommender.py` still uses 40/30/30.
+
+| Profile | #1 changed? | Main change in the top 5 |
+| --- | --- | --- |
+| High-Energy Pop | No (Sunrise City) | Gym Hero fell from #2 to #4; Rooftop Lights and Island Time Radio moved up |
+| Chill Lofi | No (Midnight Coding) | Spacewalk Thoughts (ambient, chill) passed Focus Flow (lofi, focused) |
+| Deep Intense Rock | No (Storm Runner) | Same order; Gym Hero rose from 0.591 to 0.802 |
+| Conflicting Preferences | No (Harbor Lullaby) | Same order; Harbor Lullaby's lead shrank from 0.523 to 0.133 |
+
+Full outputs, score breakdowns, and six pairwise profile comparisons are in section 7 of the [model card](model_card.md).
+
 ---
 
 ## Limitations and Risks
