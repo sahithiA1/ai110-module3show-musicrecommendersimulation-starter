@@ -148,7 +148,14 @@ def test_explain_recommendation_mentions_mismatches():
 
 def test_load_songs_reads_catalog():
     songs = load_songs("data/songs.csv")
-    assert len(songs) == 10
+    # 10 original songs + 8 added songs
+    assert len(songs) == 18
+    ids = [song["id"] for song in songs]
+    assert len(set(ids)) == len(ids), "song ids must be unique"
+    for song in songs:
+        for key in ("energy", "valence", "danceability", "acousticness"):
+            assert 0.0 <= song[key] <= 1.0
+        assert song["tempo_bpm"] > 0
     first = songs[0]
     assert first["title"] == "Sunrise City"
     assert first["genre"] == "pop"
