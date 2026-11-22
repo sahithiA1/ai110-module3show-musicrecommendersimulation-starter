@@ -134,15 +134,28 @@ You can add more tests in `tests/test_recommender.py`.
 
 ## Sample Recommendation Output
 
-Paste a sample of your recommender's output here as a text block so a reader can see what it produces:
+Output of `python -m src.main` using the default profile in `src/main.py` (`genre="pop"`, `mood="happy"`, `energy=0.8`, `k=5`):
 
-```
-# e.g.:
-# User profile: genre=indie, mood=chill, energy=low
-# Recommendations:
-#   1. ...
-#   2. ...
-#   3. ...
+```text
+Loading songs from data/songs.csv...
+Loaded 10 songs.
+
+Top recommendations:
+
+Sunrise City - Score: 0.99
+Because: genre matches your favorite (pop); mood matches your favorite (happy); energy 0.82 is 98% similar to your target 0.80
+
+Gym Hero - Score: 0.66
+Because: genre matches your favorite (pop); mood is intense, not happy; energy 0.93 is 87% similar to your target 0.80
+
+Rooftop Lights - Score: 0.59
+Because: genre is indie pop, not pop; mood matches your favorite (happy); energy 0.76 is 96% similar to your target 0.80
+
+Night Drive Loop - Score: 0.28
+Because: genre is synthwave, not pop; mood is moody, not happy; energy 0.75 is 95% similar to your target 0.80
+
+Storm Runner - Score: 0.27
+Because: genre is rock, not pop; mood is intense, not happy; energy 0.91 is 89% similar to your target 0.80
 ```
 
 **Screenshot or video** *(optional)*: <!-- Insert a screenshot or demo video link here -->
@@ -151,25 +164,73 @@ Paste a sample of your recommender's output here as a text block so a reader can
 
 ## Experiments You Tried
 
-Use this section to document the experiments you ran. For example:
+All scores below come from running `recommend_songs()` on `data/songs.csv` with the 40/30/30 weights. Scores are rounded to three decimals.
 
-- What happened when you changed the weight on genre from 2.0 to 0.5
-- What happened when you added tempo or valence to the score
-- How did your system behave for different types of users
+### Experiment 1: Pop, happy, energy 0.8
+
+| Rank | Song | Genre / Mood / Energy | Score |
+| --- | --- | --- | --- |
+| 1 | Sunrise City | pop / happy / 0.82 | 0.994 |
+| 2 | Gym Hero | pop / intense / 0.93 | 0.661 |
+| 3 | Rooftop Lights | indie pop / happy / 0.76 | 0.588 |
+
+Sunrise City matches all three features. Gym Hero ranks second only because it shares the genre: the 0.40 genre weight beats Rooftop Lights' 0.30 mood match, even though Rooftop Lights is closer in energy (0.76 vs. 0.93) and has the right mood. Rooftop Lights gets no genre credit because `indie pop` is treated as a completely different string from `pop`.
+
+### Experiment 2: Lofi, chill, energy 0.4
+
+| Rank | Song | Genre / Mood / Energy | Score |
+| --- | --- | --- | --- |
+| 1 | Midnight Coding | lofi / chill / 0.42 | 0.994 |
+| 2 | Library Rain | lofi / chill / 0.35 | 0.985 |
+| 3 | Focus Flow | lofi / focused / 0.40 | 0.700 |
+
+The results move completely to the calm end of the catalog; none of the pop songs from Experiment 1 appear. This profile has the closest competition at the top because the catalog has three lofi songs and two of them are also `chill`, so energy similarity decides the order (0.42 is closer to 0.4 than 0.35 is). Focus Flow has a *perfect* energy match but loses 0.30 because its mood is `focused` instead of `chill`. Spacewalk Thoughts (ambient, chill) is fourth with 0.564, so a calm song in a different genre is held below every lofi song.
+
+### Experiment 3: Rock, intense, energy 0.9
+
+| Rank | Song | Genre / Mood / Energy | Score |
+| --- | --- | --- | --- |
+| 1 | Storm Runner | rock / intense / 0.91 | 0.997 |
+| 2 | Gym Hero | pop / intense / 0.93 | 0.591 |
+| 3 | Sunrise City | pop / happy / 0.82 | 0.276 |
+
+There is only one rock song, so after Storm Runner the scores drop sharply. Gym Hero is second because it shares the `intense` mood and has very similar energy. Third place, Sunrise City, scores only 0.276: it earns points from energy alone and is recommended mostly because nothing better exists. This shows how a small catalog limits users whose favorite genre is rare.
+
+### Why the recommendations changed
+
+The three profiles produced three completely different #1 songs, and each top song matched all three preferences. Below the top match, the ranking follows a clear pattern caused by the weights:
+
+1. Songs that match **genre** (worth 0.40) come next.
+2. Then songs that match **mood** (worth 0.30).
+3. Songs that match neither are sorted only by **energy**, and their scores stay below 0.30.
+
+### Experiment 4: Changing the weights
+
+To test how much the weights matter, I temporarily changed the weights to **genre 0.2 / mood 0.3 / energy 0.5** in a separate script, without changing `src/recommender.py`.
+
+| Profile | Top 3 with 0.4 / 0.3 / 0.3 | Top 3 with 0.2 / 0.3 / 0.5 |
+| --- | --- | --- |
+| Pop, happy, 0.8 | Sunrise City (0.994), Gym Hero (0.661), Rooftop Lights (0.588) | Sunrise City (0.990), **Rooftop Lights (0.780)**, Gym Hero (0.635) |
+| Lofi, chill, 0.4 | Midnight Coding (0.994), Library Rain (0.985), Focus Flow (0.700) | Midnight Coding (0.990), Library Rain (0.975), **Spacewalk Thoughts (0.740)** |
+| Rock, intense, 0.9 | Storm Runner (0.997), Gym Hero (0.591), Sunrise City (0.276) | Storm Runner (0.995), Gym Hero (0.785), Sunrise City (0.460) |
+
+With less weight on genre, songs from *other* genres that match the mood and energy move up: Rooftop Lights passes Gym Hero, and Spacewalk Thoughts (ambient) replaces Focus Flow (lofi). The #1 songs did not change. The weights mostly decide how strongly the system sticks to a single genre.
+
+### Experiment 5: A genre that is not in the catalog
+
+A profile of **hip hop, happy, energy 0.7** returned Rooftop Lights (0.582), Sunrise City (0.564), and Night Drive Loop (0.285). No song can earn the 0.40 genre points, so the best possible score for this user is 0.60, and the recommendations are based only on mood and energy.
 
 ---
 
 ## Limitations and Risks
 
-Summarize some limitations of your recommender.
-
-Examples:
-
-- It only works on a tiny catalog
-- It does not understand lyrics or language
-- It might over favor one genre or mood
-
-You will go deeper on this in your model card.
+- **Exact-match genre and mood labels.** Genre and mood are either a perfect match or worth nothing. `indie pop` gets zero genre credit for a `pop` fan, and `relaxed` or `focused` get zero mood credit for a `chill` fan, even though these labels are closely related. The system has no idea which genres or moods are similar to each other.
+- **Very small dataset.** The catalog has only 10 songs. Some genres have several songs (3 lofi, 2 pop), while rock, jazz, ambient, synthwave, and indie pop have only one each. A rock fan gets one strong recommendation and then weak filler (Experiment 3), and a hip hop fan can never score above 0.60 (Experiment 5). Results reflect what happens to be in the CSV more than the user's actual taste.
+- **The 40/30/30 weights shape everything.** Because genre is worth more than mood, a song in the right genre with the wrong mood usually beats a song in the wrong genre with the right mood (Gym Hero over Rooftop Lights). Experiment 4 showed that changing the weights reorders the results. The weights were chosen by hand, not learned from real listener data, so they reflect a design assumption that genre matters most.
+- **No real listening history.** The recommender only knows three stated preferences. It does not use likes, skips, replays, or playlists, so it cannot learn that a user actually skips a song it recommended, and it cannot discover tastes the user did not describe. Everyone with the same three preferences gets the exact same list.
+- **Limited musical diversity.** Only genre, mood, and energy are scored. Tempo, valence, danceability, acousticness, lyrics, language, and artist are ignored (including the stored `likes_acoustic` preference). The catalog itself covers a narrow set of mostly Western, English-titled genres, so many listeners' music is not represented at all.
+- **Filter bubbles.** Because the top results always repeat the user's favorite genre and mood, the system keeps showing more of the same and rarely introduces something new. In a real app, the user would mostly click on these familiar songs, which would reinforce the same preferences over time. There is no element of exploration or variety in the ranking.
+- **Ties and ordering.** Songs with equal scores keep their order from the CSV, so position in the file can quietly affect which song is shown first.
 
 ---
 
