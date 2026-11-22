@@ -9,7 +9,12 @@ You will implement the functions in recommender.py:
 - recommend_songs
 """
 
-from recommender import load_songs, recommend_songs
+try:
+    # Works when run from the project root with: python -m src.main
+    from src.recommender import load_songs, recommend_songs
+except ModuleNotFoundError:
+    # Works when run directly with: python src/main.py
+    from recommender import load_songs, recommend_songs
 
 
 def main() -> None:
