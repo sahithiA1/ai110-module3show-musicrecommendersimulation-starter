@@ -2,20 +2,34 @@
 
 ## 1. Model Name  
 
-Give your model a short, descriptive name.  
-Example: **VibeFinder 1.0**  
+**VibeFinder 1.0**, a content-based music recommender built for CodePath AI110 Module 3.
 
 ---
 
 ## 2. Intended Use  
 
-Describe what your recommender is designed to do and who it is for. 
+### Goal and task
 
-Prompts:  
+VibeFinder 1.0 suggests songs from a small catalog that fit a listener's stated taste. The user gives one favorite genre, one favorite mood, and a target energy level from 0.0 to 1.0. The model scores every song in `data/songs.csv`, ranks them from best to worst match, and returns the top `k` songs (5 by default) with a short explanation of why each one was chosen.
 
-- What kind of recommendations does it generate  
-- What assumptions does it make about the user  
-- Is this for real users or classroom exploration  
+### Intended use
+
+- Classroom exploration of how recommender systems turn data into rankings.
+- Experimenting with how scoring weights, catalog contents, and user preferences change the results.
+- Demonstrating transparent, explainable scoring, where every score can be broken into its genre, mood, and energy parts.
+
+### Assumptions about the user
+
+- The listener can describe their taste with exactly one genre, one mood, and one energy level.
+- Those three stated preferences describe what the user wants right now, and they stay the same between requests.
+- Genre matters most (40%), followed equally by mood and energy (30% each).
+
+### Not intended for
+
+- **Real users or production apps.** The catalog has 18 fictional songs, and the weights were chosen by hand, not learned from listener data.
+- **Judging music quality or an artist's value.** A low score only means a song does not match one profile's labels.
+- **Listeners with mixed or changing tastes.** The model cannot handle "rock or metal", energy ranges, disliked genres, or taste that changes over time.
+- **High-stakes or commercial decisions** about which artists get exposure, since the results reflect the labels in a tiny hand-written CSV.
 
 ---
 
@@ -77,26 +91,45 @@ The starter code returned the first few songs in the file and a placeholder expl
 
 ## 4. Data  
 
-Describe the dataset the model uses.  
+### Catalog
 
-Prompts:  
+The catalog in `data/songs.csv` has **18 fictional songs**. The starter file had 10 songs, and I added 8 more (IDs 11 to 18), each in a genre the original data did not include. No songs were removed.
 
-- How many songs are in the catalog  
-- What genres or moods are represented  
-- Did you add or remove data  
-- Are there parts of musical taste missing in the dataset  
+Each song has 10 columns:
+
+| Feature | Used in scoring? | Range in the catalog |
+| --- | --- | --- |
+| `id`, `title`, `artist` | No (display only) | — |
+| `genre` | Yes, 40% | 15 genres |
+| `mood` | Yes, 30% | 13 moods |
+| `energy` | Yes, 30% | 0.18 to 0.97 |
+| `tempo_bpm` | No | 60 to 168 BPM |
+| `valence`, `danceability`, `acousticness` | No | 0.0 to 1.0 |
+
+### Genres and moods represented
+
+- **Genres (15):** lofi (3 songs), pop (2), and one song each for rock, ambient, jazz, synthwave, indie pop, hip hop, country, classical, metal, r&b, edm, folk, and reggae.
+- **Moods (13):** happy (3), chill (3), intense (2), and one song each for relaxed, moody, focused, confident, nostalgic, peaceful, angry, romantic, energetic, and sad.
+
+### Limitations of the data
+
+- **Very small and uneven.** 13 of the 15 genres have only one song, so most listeners get one strong match at best (see section 7).
+- **Single hand-assigned labels.** Each song has exactly one genre and one mood chosen by whoever wrote the CSV. Blends such as "sad but energetic" or "folk-rock" cannot be represented.
+- **Missing parts of musical taste.** There are no lyrics, language, release year, artist popularity, or listening history. The genres are mostly Western, and many styles (for example K-pop, Latin, Afrobeats, and gospel) are missing entirely.
+- **Feature combinations are missing.** The only sad song and the only folk song are the same low-energy track, so a request like "sad, energy 0.9" cannot be matched at all.
 
 ---
 
 ## 5. Strengths  
 
-Where does your system seem to work well  
+These strengths are based on the Phase 4 evaluation in section 7:
 
-Prompts:  
-
-- User types for which it gives reasonable results  
-- Any patterns you think your scoring captures correctly  
-- Cases where the recommendations matched your intuition  
+- **Clear, single-style listeners get a correct #1.** High-Energy Pop, Chill Lofi, and Deep Intense Rock each got a #1 song that matches all three preferences (Sunrise City, Midnight Coding, Storm Runner), each scoring above 0.99.
+- **Opposite listeners get completely different results.** The pop and lofi listeners share no songs in their top 5, and neither do the lofi and rock listeners.
+- **It works best when the catalog has depth in the user's genre.** The Chill Lofi list is the most convincing: the top four are all calm songs between 0.28 and 0.42 energy, and both lofi/chill songs come first.
+- **Energy similarity gives sensible tie-breaks.** Midnight Coding (0.42) ranks just above Library Rain (0.35) for a 0.4 target, and both are well above loud songs.
+- **Every score is explainable.** Because the score is the sum of three parts, each recommendation shows exactly why it ranked where it did (for example, Gym Hero's 0.661 = 0.400 genre + 0.000 mood + 0.261 energy).
+- **It is predictable and stable.** The same profile always produces the same list, and edge cases such as `k=0`, an empty catalog, and `k` larger than the catalog are handled without crashing. The 19 passing tests check these cases along with the scoring formula and ranking order.
 
 ---
 
@@ -298,23 +331,22 @@ With the original weights, matching the user's genre is the most valuable thing 
 
 ## 8. Future Work  
 
-Ideas for how you would improve the model next.  
-
-Prompts:  
-
-- Additional features or preferences  
-- Better ways to explain recommendations  
-- Improving diversity among the top results  
-- Handling more complex user tastes  
+1. **Give partial credit for related genres and moods.** A simple similarity table (for example, `metal` is close to `rock`, `indie pop` is close to `pop`, and `relaxed` is close to `chill`) would stop Iron Tempest and Rooftop Lights from being treated as complete misses.
+2. **Use the unused features and warn about conflicts.** Scoring `valence` and `acousticness` (and the stored `likes_acoustic` preference) would help separate sad songs from intense ones and acoustic songs from electronic ones. The explanation should also warn the user when no song matches all of their preferences, as in the folk/sad/0.9 test, instead of showing a confident-looking 0.82.
+3. **Add diversity to the top results.** A re-ranking step could limit how many songs from one genre appear in the top 5, or reserve one spot for a high-scoring song from a different genre. This would reduce the filter bubble and replace low-scoring filler with more interesting options.
 
 ---
 
 ## 9. Personal Reflection  
 
-A few sentences about your experience.  
+<!-- CHECK: This reflection was drafted with Claude Code from the project's commits and documentation. Please read it, confirm each point matches your experience, and rewrite anything in your own words. Statements marked "CHECK" below are ones only you can confirm. -->
 
-Prompts:  
+**Biggest learning moment.** My biggest learning moment came from the Conflicting Preferences test (folk, sad, energy 0.9). I expected the recommender to struggle, but it ranked Harbor Lullaby first with a score of 0.82, which looks like a strong match, even though the song's energy is only 40% similar to what I asked for. That showed me that a high score is not the same as a good recommendation: the number only reflects the rules and weights I chose, and the system had no way to tell me my preferences contradicted each other. <!-- CHECK: Is this the moment that stood out most to you? Another candidate is discovering that Gym Hero (an intense workout song) outranks happy songs for a "happy pop" listener just because of the genre label. -->
 
-- What you learned about recommender systems  
-- Something unexpected or interesting you discovered  
-- How this changed the way you think about music recommendation apps  
+**How Claude Code helped, and why I verified its work.** I used Claude Code to help implement and document the project, including running the four evaluation profiles and the weight experiment and drafting the analysis in this model card. It was fast at running many profiles, laying out results, and noticing patterns, such as four of the five songs being shared between the rock and folk/sad lists. I still verified its work because an AI assistant can describe results confidently even when a number is wrong. I checked that the documented scores came from real runs instead of estimates, recalculated example scores by hand (such as Gym Hero's 0.661), confirmed that the weight experiment ran in a temporary script so `src/recommender.py` kept its 40/30/30 weights, and ran `python -m src.main` and `pytest` before each commit. <!-- CHECK: Confirm which of these checks you personally did, and add anything Claude Code got wrong or that you changed. -->
+
+**Why a simple weighted algorithm can feel personalized.** VibeFinder is only three comparisons and a weighted sum, but its results can still feel personal. The top song usually matches everything the user said, and each recommendation comes with a reason written in "your favorite" language, such as "mood matches your favorite (happy)." Explanations like that make the list feel tailored to the listener even though the system knows nothing else about them. Anyone with the same three preferences gets exactly the same list.
+
+**What I would improve next.** I would start by giving partial credit to related genres and moods and by warning users when their preferences conflict, since those were the two weaknesses the evaluation exposed most clearly. After that, I would use the features the model already loads but ignores, like valence and acousticness, and add a diversity step so the top five is not just more of the same genre.
+
+**How this changed my view of music apps.** This project made me realize how much the people who design a recommender shape what listeners hear: they choose the labels, the weights, and which songs are in the catalog at all. Changing one weight reordered the middle of every list, and adding a single hip hop song changed that listener's #1 result. Real apps add listening history and far more data, but the same design decisions still sit underneath them. <!-- CHECK: Make sure this matches your own view. -->

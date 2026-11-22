@@ -350,10 +350,10 @@ Read and complete `model_card.md`:
 
 [**Model Card**](model_card.md)
 
-Write 1 to 2 paragraphs here about what you learned:
+<!-- CHECK: Drafted with Claude Code from this project's results. Please confirm it reflects what you learned and edit it in your own words. -->
 
-- about how recommenders turn data into predictions
-- about where bias or unfairness could show up in systems like this
+**How recommenders turn data into predictions.** Building VibeFinder showed me that a recommender's "prediction" is really just a ranking produced by rules. Each song is turned into a few numbers (a genre match, a mood match, and an energy similarity), the numbers are weighted and added into one score, and the songs are sorted. Nothing in that process understands music. The results feel accurate because the #1 song usually matches everything the user asked for, and every recommendation comes with a readable reason. The experiments showed how sensitive that ranking is: halving the genre weight moved Gym Hero from #2 to #4 for the pop listener, and adding one hip hop song changed that listener's top result.
 
+**Where bias and unfairness can show up.** Bias came from both the scoring rules and the data. Because genre is worth 40% and labels must match exactly, closely related styles like `metal` for a rock fan or `indie pop` for a pop fan get no credit, and the top results keep repeating the user's stated genre, which creates a filter bubble. The catalog gives lofi and pop listeners several good options, while fans of the 13 genres with only one song get one match followed by filler. The folk/sad/energy 0.9 test showed that the system can give a high-looking score (0.82) to a poor fit without warning the user. In a real app, choices like these would decide which artists get heard, so they deserve as much scrutiny as the code.
 
 
